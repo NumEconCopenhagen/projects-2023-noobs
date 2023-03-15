@@ -36,7 +36,7 @@ class HouseholdSpecializationModelClass:
         par.beta1_target = -0.1
 
         # f. solution
-        sol.LM_vec = np.zeros(par.wF_vec.size)
+        sol.LM_vec = np.zeros(par.wF_vec.size) # vector of LM. size is the same as wF_vec. 
         sol.HM_vec = np.zeros(par.wF_vec.size)
         sol.LF_vec = np.zeros(par.wF_vec.size)
         sol.HF_vec = np.zeros(par.wF_vec.size)
@@ -54,7 +54,12 @@ class HouseholdSpecializationModelClass:
         C = par.wM*LM + par.wF*LF
 
         # b. home production
-        H = HM**(1-par.alpha)*HF**par.alpha
+        if par.sigma == 0:
+            H = pd.min(HM,HF)
+        elif par.sigma == 1:
+            H = HM**(1-par.alpha)*HF**par.alpha
+        else:
+            H = ((1-par.alpha)*HM**((par.sigma-1)/par.sigma)+par.alpha*HF**((par.sigma-1)/par.sigma))**(par.sigma/(par.sigma-1))
 
         # c. total consumption utility
         Q = C**par.omega*H**(1-par.omega)
@@ -74,13 +79,13 @@ class HouseholdSpecializationModelClass:
         par = self.par
         sol = self.sol
         opt = SimpleNamespace()
-        
+   
         # a. all possible choices
         x = np.linspace(0,24,49)
         LM,HM,LF,HF = np.meshgrid(x,x,x,x) # all combinations
-    
-        LM = LM.ravel() # vector
-        HM = HM.ravel()
+ 
+        LM = LM.ravel() # vector 
+        HM = HM.ravel() # ravel orders the elements 
         LF = LF.ravel()
         HF = HF.ravel()
 
@@ -89,7 +94,7 @@ class HouseholdSpecializationModelClass:
     
         # c. set to minus infinity if constraint is broken
         I = (LM+HM > 24) | (LF+HF > 24) # | is "or"
-        u[I] = -np.inf
+        u[I] = -np.inf 
     
         # d. find maximizing argument
         j = np.argmax(u)
@@ -101,13 +106,14 @@ class HouseholdSpecializationModelClass:
 
         # e. print
         if do_print:
-            for k,v in opt.__dict__.items():
-                print(f'{k} = {v:6.4f}')
+         for k,v in opt.__dict__.items():
+             print(f'{k} = {v:6.4f}')
 
         return opt
 
     def solve(self,do_print=False):
         """ solve model continously """
+
 
         pass    
 
