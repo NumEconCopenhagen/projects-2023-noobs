@@ -1,9 +1,8 @@
-# \[Group name\]
+# Noobs
 
 **Group members:**
-- A
-- B
-- C
+- Johannes Møberg
+- Georg Kyrilenko
 
 This repository contains  
 1. Inaugural project. 
