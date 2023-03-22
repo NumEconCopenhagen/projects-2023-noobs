@@ -113,14 +113,43 @@ class HouseholdSpecializationModelClass:
 
     def solve(self,do_print=False):
         """ solve model continously """
+       
+        par = self.par
+        sol = self.sol
+        opt = SimpleNamespace()
 
+        # a. set objective function for utility
+        def objective(x):
+            return self.calc_utility(x[0], x[1], x[2], x[3])
+        
+        # b. set contraints and bounds
+        obj = lambda x: -objective(x)
 
-        pass    
+        xguess = [12]*4
+        bounds = [(0,24)]*4
+        constraint1 = {'type':'ineq', 'fun': lambda x: 24 - x[0] - x[1]}
+        constraint2 = {'type':'ineq', 'fun': lambda x: 24 - x[2] - x[3]}
+        constraints = [constraint1, constraint2]
+
+        # c. optimizer
+        result = optimize.minimize(obj,
+                            xguess,
+                            method='SLSQP',
+                            bounds=bounds,
+                            constraints=constraints)
+        
+        # d. save results
+        opt.LM = result.x[0]
+        opt.HM = result.x[1]
+        opt.LF = result.x[2]
+        opt.HF = result.x[3]
+        
+        return opt
 
     def solve_wF_vec(self,discrete=False):
         """ solve model for vector of female wages """
+    
 
-        pass
 
     def run_regression(self):
         """ run regression """
