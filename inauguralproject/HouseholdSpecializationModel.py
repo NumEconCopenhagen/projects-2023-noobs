@@ -1,10 +1,9 @@
-
 from types import SimpleNamespace
 
 import numpy as np
 from scipy import optimize
 
-import pandas as pd 
+import pandas as pd
 import matplotlib.pyplot as plt
 
 class HouseholdSpecializationModelClass:
@@ -36,7 +35,7 @@ class HouseholdSpecializationModelClass:
         par.beta1_target = -0.1
 
         # f. solution
-        sol.LM_vec = np.zeros(par.wF_vec.size) # vector of LM. size is the same as wF_vec. 
+        sol.LM_vec = np.zeros(par.wF_vec.size)
         sol.HM_vec = np.zeros(par.wF_vec.size)
         sol.LF_vec = np.zeros(par.wF_vec.size)
         sol.HF_vec = np.zeros(par.wF_vec.size)
@@ -54,10 +53,10 @@ class HouseholdSpecializationModelClass:
         C = par.wM*LM + par.wF*LF
 
         # b. home production
-        if par.sigma == 0:
-            H = pd.min(HM,HF)
-        elif par.sigma == 1:
-            H = HM**(1-par.alpha)*HF**par.alpha
+        if par.sigma==0:
+            H=min(HM, HF)
+        elif par.sigma==1:
+            H=HM**(1-par.alpha)*HF**par.alpha
         else:
             H = ((1-par.alpha)*HM**((par.sigma-1)/par.sigma+1e-8)+par.alpha*HF**((par.sigma-1)/par.sigma+1e-8))**(par.sigma/(par.sigma+1e-8-1))
 
@@ -73,19 +72,19 @@ class HouseholdSpecializationModelClass:
         
         return utility - disutility
 
-    def solve_discrete(self,do_print=False):
+    def solve_discrete(self,do_print=False, ratio=False):
         """ solve model discretely """
         
         par = self.par
         sol = self.sol
         opt = SimpleNamespace()
-   
+        
         # a. all possible choices
         x = np.linspace(0,24,49)
         LM,HM,LF,HF = np.meshgrid(x,x,x,x) # all combinations
- 
-        LM = LM.ravel() # vector 
-        HM = HM.ravel() # ravel orders the elements 
+    
+        LM = LM.ravel() # vector
+        HM = HM.ravel()
         LF = LF.ravel()
         HF = HF.ravel()
 
@@ -94,7 +93,7 @@ class HouseholdSpecializationModelClass:
     
         # c. set to minus infinity if constraint is broken
         I = (LM+HM > 24) | (LF+HF > 24) # | is "or"
-        u[I] = -np.inf 
+        u[I] = -np.inf
     
         # d. find maximizing argument
         j = np.argmax(u)
@@ -103,53 +102,54 @@ class HouseholdSpecializationModelClass:
         opt.HM = HM[j]
         opt.LF = LF[j]
         opt.HF = HF[j]
+        opt.ratio = opt.HF/opt.HM
+
 
         # e. print
         if do_print:
-         for k,v in opt.__dict__.items():
-             print(f'{k} = {v:6.4f}')
+            for k,v in opt.__dict__.items():
+                print(f'{k} = {v:6.4f}')
 
         return opt
 
     def solve(self,do_print=False):
         """ solve model continously """
-       
         par = self.par
         sol = self.sol
         opt = SimpleNamespace()
 
-        # a. set objective function for utility
-        def objective(x):
-            return self.calc_utility(x[0], x[1], x[2], x[3])
-        
-        # b. set contraints and bounds
-        obj = lambda x: -objective(x)
+        # a. Sets the start guesses at the optimal for the discrete optimization
+        LM_guess=[4.5]
+        LF_guess=[4.5]
+        HM_guess=[4.5]
+        HF_guess=[4.5]
 
-        xguess = [12]*4
-        bounds = [(0,24)]*4
-        constraint1 = {'type':'ineq', 'fun': lambda x: 24 - x[0] - x[1]}
-        constraint2 = {'type':'ineq', 'fun': lambda x: 24 - x[2] - x[3]}
-        constraints = [constraint1, constraint2]
 
-        # c. optimizer
-        result = optimize.minimize(obj,
-                            xguess,
-                            method='SLSQP',
-                            bounds=bounds,
-                            constraints=constraints)
-        
-        # d. save results
-        opt.LM = result.x[0]
-        opt.HM = result.x[1]
-        opt.LF = result.x[2]
-        opt.HF = result.x[3]
-        
+        # b. calculate utility (negative as we want to maximize)
+        def objective_function(x):
+            LM, HM, LF, HF = x
+            if LM + HM > 24 or LF + HF > 24:
+                return -np.inf
+            return -self.calc_utility(LM, HM, LF, HF)
+
+        # d. find maximizing argument
+        res = optimize.minimize(objective_function, [LM_guess, HM_guess, LF_guess, HF_guess], method="Nelder-Mead")
+
+        if not res.success:
+            print("Optimization failed.")
+
+        opt.LM = res.x[0]
+        opt.HM = res.x[1]
+        opt.LF = res.x[2]
+        opt.HF = res.x[3]
+        opt.ratio = opt.HF / opt.HM
+
+         # e. print
+        if do_print:
+            for k, v in opt.__dict__.items():
+                print(f"{k} = {v:6.4f}")
+
         return opt
-
-    def solve_wF_vec(self,discrete=False):
-        """ solve model for vector of female wages """
-    
-
 
     def run_regression(self):
         """ run regression """
@@ -163,6 +163,25 @@ class HouseholdSpecializationModelClass:
         sol.beta0,sol.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
     def estimate(self,alpha=None,sigma=None):
-        """ estimate alpha and sigma """
+        """ minimize error between model results and targets """
 
-        pass
+        par = self.par
+        sol = self.sol
+
+        # a. define error function
+        def error_function(alpha_sigma):
+            alpha, sigma = alpha_sigma.ravel()  # flatten the 2D array
+            par.alpha, par.sigma = alpha, sigma
+            self.solve_wF_vec()
+            self.run_regression()
+            return (par.beta0_target - sol.beta0)**2 + (par.beta1_target - sol.beta1)**2
+
+        # b. find minimizing argument
+        res = optimize.minimize(error_function, [par.alpha, par.sigma], method="Nelder-Mead")
+
+        if not res.success:
+            print("Optimization failed.")
+
+        # d. print results
+        print(f"Optimal alpha: {par.alpha}")
+        print(f"Optimal sigma: {par.sigma}")
