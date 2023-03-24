@@ -114,6 +114,7 @@ class HouseholdSpecializationModelClass:
 
     def solve(self,do_print=False):
         """ solve model continously """
+
         par = self.par
         sol = self.sol
         opt = SimpleNamespace()
@@ -150,6 +151,31 @@ class HouseholdSpecializationModelClass:
                 print(f"{k} = {v:6.4f}")
 
         return opt
+    
+    def solve_wF_vec(self,discrete=False):
+        """ solve model for vector of female wages """
+
+        par = self.par
+        sol = self.sol
+
+        # discrete model with different values of wM.
+        for i, wage in enumerate(par.wF_vec):
+
+            # set new value for wF
+            self.par.wF = wage
+
+            # solve model
+            if discrete==True:
+                dsol = self.solve_discrete()
+                # store results
+                sol.HF_vec[i]=dsol.HF
+                sol.HM_vec[i]=dsol.HM
+
+            else:
+                csol = self.solve()
+                # store results
+                sol.HF_vec[i]=csol.HF
+                sol.HM_vec[i]=csol.HM
 
     def run_regression(self):
         """ run regression """
@@ -165,23 +191,4 @@ class HouseholdSpecializationModelClass:
     def estimate(self,alpha=None,sigma=None):
         """ minimize error between model results and targets """
 
-        par = self.par
-        sol = self.sol
-
-        # a. define error function
-        def error_function(alpha_sigma):
-            alpha, sigma = alpha_sigma.ravel()  # flatten the 2D array
-            par.alpha, par.sigma = alpha, sigma
-            self.solve_wF_vec()
-            self.run_regression()
-            return (par.beta0_target - sol.beta0)**2 + (par.beta1_target - sol.beta1)**2
-
-        # b. find minimizing argument
-        res = optimize.minimize(error_function, [par.alpha, par.sigma], method="Nelder-Mead")
-
-        if not res.success:
-            print("Optimization failed.")
-
-        # d. print results
-        print(f"Optimal alpha: {par.alpha}")
-        print(f"Optimal sigma: {par.sigma}")
+    pass
