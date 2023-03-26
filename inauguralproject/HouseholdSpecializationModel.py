@@ -158,8 +158,6 @@ class HouseholdSpecializationModelClass:
         par = self.par
         sol = self.sol
 
-        ratio = []
-
         # discrete model with different values of wM.
         for i, wage in enumerate(par.wF_vec):
 
