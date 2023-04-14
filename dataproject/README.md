@@ -1,14 +1,14 @@
 # Data analysis project
 
-Our project is titled **PROJECT TITLE** and is about EXPLAIN.
+Our project is titled **Alternative Philips curve** and is about the use of the consumer price index for beer instead of inflation to depict the traditional Philips curve, which says that higher inflation will result in lower unemployment rate and vice versa. We find that consumer price index for beer is a worse alternative to depict the traditional Philips curve, as the numeric correlation between the consumer price index for beer and the gross unemployment rate is lower than the one where inflation is being used. 
 
-The **results** of the project can be seen from running [dataproject.ipynb](dataproject.ipynb).
+The **results** of the project can be seen from running [beer.ipynb](beer.ipynb).
 
-We apply the **following datasets**:
+We apply the **following datasets** by using DstApi:
 
-1. dataX.csv (*source*) 
-1. dataY.csv (*source*)
+DstApi("PRIS111") and DstApi("AUS07")
 
 **Dependencies:** Apart from a standard Anaconda Python 3 installation, the project requires the following installations:
 
-``pip install matplotlib-venn``
+`pip install pandas-datareader`
+`pip install git+https://github.com/alemartinello/dstapi`
