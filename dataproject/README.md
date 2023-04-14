@@ -1,6 +1,6 @@
 # Data analysis project
 
-Our project is titled **Alternative Philips curve** explores the use of the consumer price index for beer as a substitute for inflation in depicting the traditional Philips curve. The Philips curve posits that higher inflation leads to lower unemployment rates and vice versa. However, our findings indicate that the consumer price index for beer is a less effective alternative for depicting the traditional Philips curve, as the numeric correlation between the consumer price index for beer and the gross unemployment rate is lower compared to when inflation is used.
+Our project, titled **Alternative Philips Curve,** explores the use of the consumer price index for beer as a substitute for inflation in depicting the traditional Philips curve. The Philips curve posits that higher inflation leads to lower unemployment rates and vice versa. However, our findings indicate that the consumer price index for beer is a less effective alternative for depicting the traditional Philips curve, as the numeric correlation between the consumer price index for beer and the gross unemployment rate is lower compared to when inflation is used.
 
 The **results** of the project can be seen from running [beer.ipynb](beer.ipynb).
 
