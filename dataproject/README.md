@@ -6,7 +6,7 @@ The **results** of the project can be seen from running [beer.ipynb](beer.ipynb)
 
 We apply the **following datasets** by using DstApi:
 
-DstApi("PRIS111") and DstApi("AUS07")
+PRIS111 and AUS07
 
 **Dependencies:** Apart from a standard Anaconda Python 3 installation, the project requires the following installations:
 
