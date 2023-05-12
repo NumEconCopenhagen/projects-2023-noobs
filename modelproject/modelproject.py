@@ -2,14 +2,11 @@ from scipy import optimize
 
 def solve_ss(alpha, c):
     """ Example function. Solve for steady state k. 
-
     Args:
         c (float): costs
         alpha (float): parameter
-
     Returns:
         result (RootResults): the solution represented as a RootResults object.
-
     """ 
     
     # a. Objective function, depends on k (endogenous) and c (exogenous).
