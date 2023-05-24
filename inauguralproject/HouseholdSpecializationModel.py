@@ -136,9 +136,6 @@ class HouseholdSpecializationModelClass:
         # c. find maximizing argument
         res = optimize.minimize(objective_function, x0, method='Nelder-Mead', bounds=bounds, tol=1e-8)
 
-        if not res.success:
-            print("Optimization failed.")
-
         # d. store results
         sol.LM = res.x[0]
         sol.HM = res.x[1]
@@ -227,9 +224,6 @@ class HouseholdSpecializationModelClass:
             
                 # c. call solver
                 sol = optimize.minimize(obj, x0, method='Nelder-Mead', bounds=bounds, tol=1e-8)
-
-                if not sol.success:
-                    print("Optimization failed.")
             
                 # d. store results
                 sol.alpha = sol.x[0]
@@ -261,9 +255,6 @@ class HouseholdSpecializationModelClass:
             
                 # c. call solver
                 sol = optimize.minimize(obj, x0, method='Nelder-Mead', tol=1e-8)
-
-                if not sol.success:
-                    print('Optimization failed.')
             
                 # d. store results
                 sol.sigma = sol.x[0]
@@ -293,9 +284,6 @@ class HouseholdSpecializationModelClass:
         
             # c. call solver
             sol = optimize.minimize(obj, x0, method='Nelder-Mead', bounds=bounds, tol= 1e-8)
-
-            if not sol.success:
-                print('Optimization failed.')
 
             # d. store results
             #sol.nuF = sol.x[0]
