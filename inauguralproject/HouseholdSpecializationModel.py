@@ -18,7 +18,10 @@ class HouseholdSpecializationModelClass:
         # b. preferences
         par.rho = 2.0
         par.nu = 0.001
-        par.epsilon = 1.0
+        par.nuM = 0.001
+        par.nuF = 0.001
+        par.epsilonF = 1.0
+        par.epsilonM = 1.0
         par.omega = 0.5 
 
         # c. household production
@@ -39,6 +42,7 @@ class HouseholdSpecializationModelClass:
         sol.HM_vec = np.zeros(par.wF_vec.size)
         sol.LF_vec = np.zeros(par.wF_vec.size)
         sol.HF_vec = np.zeros(par.wF_vec.size)
+        sol.logHFHM_vec = np.zeros(par.wF_vec.size)
 
         sol.beta0 = np.nan
         sol.beta1 = np.nan
@@ -65,10 +69,11 @@ class HouseholdSpecializationModelClass:
         utility = np.fmax(Q,1e-8)**(1-par.rho)/(1-par.rho)
 
         # d. disutlity of work
-        epsilon_ = 1+1/par.epsilon
+        epsilon_F = 1+1/par.epsilonF
+        epsilon_M = 1+1/par.epsilonM
         TM = LM+HM
         TF = LF+HF
-        disutility = par.nu*(TM**epsilon_/epsilon_+TF**epsilon_/epsilon_)
+        disutility = par.nu * (TM**epsilon_M/epsilon_M) + par.nu * (TF**epsilon_F/epsilon_F)
         
         return utility - disutility
 
@@ -77,7 +82,6 @@ class HouseholdSpecializationModelClass:
         
         par = self.par
         sol = self.sol
-        opt = SimpleNamespace()
         
         # a. all possible choices
         x = np.linspace(0,24,49)
@@ -98,84 +102,85 @@ class HouseholdSpecializationModelClass:
         # d. find maximizing argument
         j = np.argmax(u)
         
-        opt.LM = LM[j]
-        opt.HM = HM[j]
-        opt.LF = LF[j]
-        opt.HF = HF[j]
-        opt.ratio = opt.HF/opt.HM
-
+        sol.LM = LM[j]
+        sol.HM = HM[j]
+        sol.LF = LF[j]
+        sol.HF = HF[j]
+        sol.HFHM = sol.HF/sol.HM
 
         # e. print
         if do_print:
-            for k,v in opt.__dict__.items():
+            for k,v in sol.__dict__.items():
                 print(f'{k} = {v:6.4f}')
 
-        return opt
+        return sol
 
     def solve(self,do_print=False):
         """ solve model continously """
 
         par = self.par
         sol = self.sol
-        opt = SimpleNamespace()
 
-        # a. Sets the start guesses at the optimal for the discrete optimization
-        LM_guess=[4.5]
-        LF_guess=[4.5]
-        HM_guess=[4.5]
-        HF_guess=[4.5]
-
-
-        # b. calculate utility (negative as we want to maximize)
+        # a. define objective function (negative as we want to maximize)
         def objective_function(x):
             LM, HM, LF, HF = x
             if LM + HM > 24 or LF + HF > 24:
                 return -np.inf
-            return -self.calc_utility(LM, HM, LF, HF)
+            else:
+                return -self.calc_utility(LM, HM, LF, HF)
+        
+        # b. set bounds and initial guess
+        x0 = [4.5, 4.5, 4.5, 4.5]
+        bounds = ((0,24),(0,24),(0,24),(0,24))
 
-        # d. find maximizing argument
-        res = optimize.minimize(objective_function, [LM_guess, HM_guess, LF_guess, HF_guess], method="Nelder-Mead")
+        # c. find maximizing argument
+        res = optimize.minimize(objective_function, x0, method='Nelder-Mead', bounds=bounds, tol=1e-8)
 
-        if not res.success:
-            print("Optimization failed.")
-
-        opt.LM = res.x[0]
-        opt.HM = res.x[1]
-        opt.LF = res.x[2]
-        opt.HF = res.x[3]
-        opt.ratio = opt.HF / opt.HM
+        # d. store results
+        sol.LM = res.x[0]
+        sol.HM = res.x[1]
+        sol.LF = res.x[2]
+        sol.HF = res.x[3]
+        sol.HFHM = sol.HF / sol.HM
 
          # e. print
         if do_print:
-            for k, v in opt.__dict__.items():
+            for k, v in sol.__dict__.items():
                 print(f"{k} = {v:6.4f}")
 
-        return opt
+        return sol
     
-    def solve_wF_vec(self,discrete=False):
+    def solve_wF_vec(self,discrete=False, do_print=False):
         """ solve model for vector of female wages """
 
         par = self.par
         sol = self.sol
 
-        # discrete model with different values of wM.
+        # a. loop over female wage vector 
         for i, wage in enumerate(par.wF_vec):
 
-            # set new value for wF
+            # i. set new value of wF
             self.par.wF = wage
 
-            # solve model
+            # ii. solve model
             if discrete==True:
-                dsol = self.solve_discrete()
-                # store results
-                sol.HF_vec[i]=dsol.HF
-                sol.HM_vec[i]=dsol.HM
-
+                model = self.solve_discrete()
             else:
-                csol = self.solve()
-                # store results
-                sol.HF_vec[i]=csol.HF
-                sol.HM_vec[i]=csol.HM
+                model = self.solve()
+       
+            # iii. store results
+            sol.LM_vec[i] = model.LM
+            sol.LF_vec[i] = model.LF
+            sol.HF_vec[i] = model.HF
+            sol.HM_vec[i] = model.HM
+            sol.logHFHM_vec[i] = np.log(sol.HF / sol.HM)
+
+            # iv. print
+            if do_print:
+                print(rf"The log optimal relative hours at home is {np.log(sol.HF / sol.HM):.3f}"
+                    + rf" for a log relative wage of {np.log(wage):.2f} when wF = {wage}")
+
+        return sol
 
     def run_regression(self):
         """ run regression """
@@ -188,7 +193,109 @@ class HouseholdSpecializationModelClass:
         A = np.vstack([np.ones(x.size),x]).T
         sol.beta0,sol.beta1 = np.linalg.lstsq(A,y,rcond=None)[0]
     
-    def estimate(self,alpha=None,sigma=None):
-        """ minimize error between model results and targets """
+    def estimate(self, alpha=None, do_print=False, extended=False):
+        """minimize error between model results and targets"""
+    
+        par = self.par
+        sol = self.sol
+    
+        # solve baseline model
+        if extended==False:
+        
+            # solve baseline model for alpha and sigma
+            if alpha==None:
+            
+                # a. define objective function
+                def obj(x):
+                    par.alpha, par.sigma = x
+                
+                    # i. solve models
+                    self.solve_wF_vec()
+                    self.run_regression()
+                
+                    # ii. solve error
+                    error = (sol.beta0 - par.beta0_target) ** 2 + (sol.beta1 - par.beta1_target) ** 2
+                
+                    return error
+            
+                # b. initial guess and bounds
+                x0 = [par.alpha, par.sigma]
+                bounds = ((0, 1), (0, 2))
+            
+                # c. call solver
+                sol = optimize.minimize(obj, x0, method='Nelder-Mead', bounds=bounds, tol=1e-8)
+            
+                # d. store results
+                sol.alpha = sol.x[0]
+                sol.sigma = sol.x[1]
+            
+                # e. print results
+                if do_print:
+                    print(f"the error function is minimized at alpha = {sol.alpha:.3f} and sigma = {sol.sigma:.3f}")
+        
+            # solve baseline model for sigma
+            else:
+            
+                # a. define objective function
+                def obj(x):
+                    par.sigma = x
+                    par.alpha = alpha
+                
+                    # i. solve models
+                    self.solve_wF_vec()
+                    self.run_regression()
+                
+                    # ii. solve error
+                    error = (sol.beta0 - par.beta0_target) ** 2 + (sol.beta1 - par.beta1_target) ** 2
+                
+                    return error
+            
+                # b. initial guess and bounds
+                x0 = [1]
+            
+                # c. call solver
+                sol = optimize.minimize(obj, x0, method='Nelder-Mead', tol=1e-8)
+            
+                # d. store results
+                sol.sigma = sol.x[0]
+            
+                # e. print results
+                if do_print:
+                    print(f"the error function is minimized at alpha = {alpha:.3f} and sigma = {sol.sigma:.3f}")
+    
+        # solve extended model
+        else:
+            def obj(x):
+                par.epsilonF, par.sigma = x
+                par.alpha = alpha
+            
+                # i. solve models
+                self.solve_wF_vec()
+                self.run_regression()
+            
+                # ii. solve error
+                error = (sol.beta0 - par.beta0_target) ** 2 + (sol.beta1 - par.beta1_target) ** 2
+            
+                return error
+        
+            # b. initial guess and bounds
+            x0 = [4.5, 0.25]
+            bounds = ((0,6),(0,2))
+        
+            # c. call solver
+            sol = optimize.minimize(obj, x0, method='Nelder-Mead', bounds=bounds, tol= 1e-8)
 
-    pass
+            # d. store results
+            #sol.nuF = sol.x[0]
+            sol.epsilonF = sol.x[0]
+            sol.sigma = sol.x[1]
+
+            # e. print results
+            if do_print:
+                print(f'the error function is minimized at alpha = {alpha:.3f}, sigma = {sol.sigma:.3f} and epsilon_F = {sol.epsilonF:.3f}')
+        
+       
+
+
+
+
